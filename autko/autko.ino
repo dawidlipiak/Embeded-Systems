@@ -35,7 +35,7 @@ volatile char cmd;
 
 void setup() {
   // put your setup code here, to run once:
-  w.attach(8,12,6,4,2,5);
+  w.attach(12,8,6,2,4,5);
   servo.attach(SERVO_PIN);
   IrReceiver.begin(IR_RECEIVE_PIN, false);
   beeper.init();
@@ -71,36 +71,21 @@ void loop() {
     Serial.println(IR_command);
     switch(IR_command) {
         case IR_Button_FORWARD :
-            w.setSpeed(150);
+            w.setSpeedLeft(130);
+            w.setSpeedRight(130);
             w.forward();
             servo.write(90);
             servoPosition = 90;
           break;
         case IR_Button_BACKWARD :
-          w.setSpeed(150);
+          w.setSpeed(130);
           w.back();
           break;
         case IR_Button_LEFT :
-          servo.write(180);
-          servoPosition = 180;
-          w.setSpeed(150);
-          w.backLeft();
-          w.forwardRight();
-          delay(850);
-          w.stop();
-          servo.write(90);
-          servoPosition = 90;
+          turnLeft();
           break;
         case IR_Button_RIGHT :
-          servo.write(0);
-          servoPosition = 0;
-          w.setSpeed(150);
-          w.backRight();
-          w.forwardLeft();
-          delay(850);
-          w.stop();
-          servo.write(90);
-          servoPosition = 90;
+          turnRight();
           break;
         case IR_Button_ENTER :
           w.stop();
@@ -160,18 +145,22 @@ void loop() {
     lcd.clearRight();
   }
 
-  if(lookAndTellDistance(servoPosition) < 10){
+  if(lookAndTellDistance(servoPosition) < 13){
     if(w.getLeftDirection() != Wheels::Direction::BACKWARD){
       servo.write(180);
       servoPosition = 180;
       turnRight();
-      while(lookAndTellDistance(servoPosition) < 15){
+      w.setSpeed(130);
+      while(lookAndTellDistance(servoPosition) < 17){
         w.forward();
-        delay(100);
+        delay(200);
       }
-      turnLeft();
-      w.forward();
       servo.write(90);
+      delay(300);
+      turnLeft();
+      delay(500);
+      w.setSpeed(130);
+      w.forward();
     }
   }
 }
@@ -185,19 +174,25 @@ ISR(PCINT1_vect){
 }
 
 void turnLeft() {
-  w.setSpeed(150);
+  w.stop();
+  w.setSpeed(140);
+  delay(150);
   w.backLeft();
   w.forwardRight();
-  delay(850);
+  delay(600);
   w.stop();
+  delay(150);
 }
 
 void turnRight() {
-  w.setSpeed(150);
+  w.stop();
+  w.setSpeed(140);
+  delay(150);
   w.backRight();
   w.forwardLeft();
-  delay(850);
+  delay(600);
   w.stop();
+  delay(150);
 }
 uint16_t lookAndTellDistance(byte angle) {
   

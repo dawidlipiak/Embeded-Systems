@@ -46,8 +46,8 @@ void Wheels::setSpeedLeft(uint8_t s)
 
 void Wheels::setSpeed(uint8_t s)
 {
-    setSpeedLeft(s);
-    setSpeedRight(s);
+    setSpeedLeft(s-6);
+    setSpeedRight(s+6);
     this->manageBeeper();
 }
 
