@@ -11,6 +11,7 @@
 #include <Servo.h>
 #include <PinChangeInterrupt.h>
 #include <IRremote.hpp>
+#include <math.h>
 
 #include "Wheels.h"
 #include "Lcd.h"
@@ -54,18 +55,23 @@ void setup() {
   pinMode(TRIG, OUTPUT);    // TRIG startuje sonar
   pinMode(ECHO, INPUT);     // ECHO odbiera powracający impuls
 
-  cnt0=0;
-  cnt1=0;
 
+  // Czujnik szczelinowy
   PCICR  = 0x02;  // włącz pin change interrupt dla 1 grupy (A0..A5)
   PCMSK1 = 0x03;  // włącz przerwanie dla A0, A1'
+  cnt0=0;
+  cnt1=0;
   servo.write(90);
+  delay(500);
+  lookAndTellDistance(0);
+  delay(500);
   // IrController.validatePIN();
 }
 
 void loop() {
   w.manageBeeper();
 
+  // IR PILOT HANDLER 
   if (IrReceiver.decode()) {
     uint16_t IR_command = IrReceiver.decodedIRData.command; 
     Serial.println(IR_command);
@@ -82,10 +88,13 @@ void loop() {
           w.back();
           break;
         case IR_Button_LEFT :
-          turnLeft();
+          turnByAngle(-90);
+          servo.write(180);
+
           break;
         case IR_Button_RIGHT :
-          turnRight();
+          turnByAngle(90);
+          servo.write(0);
           break;
         case IR_Button_ENTER :
           w.stop();
@@ -115,6 +124,7 @@ void loop() {
     }
   }
 
+  
   if (timer_lcdSpeed.periodIterruptCheck()) {
     // Serial.println((20.73*1000*(cnt0 - prevCnt0))/(sensorInterval*20));
     lcd.setMsgLeft((20.73*1000*(cnt0 - prevCnt0))/(timer_lcdSpeed.getInterruptInterval()*21), w.getLeftDirection());
@@ -145,26 +155,15 @@ void loop() {
     lcd.clearRight();
   }
 
-  if(lookAndTellDistance(servoPosition) < 13){
+  // Avoid collision
+  if(lookAndTellDistance(90) < 23){
     if(w.getLeftDirection() != Wheels::Direction::BACKWARD){
-      servo.write(180);
-      servoPosition = 180;
-      turnRight();
-      w.setSpeed(130);
-      while(lookAndTellDistance(servoPosition) < 17){
-        w.forward();
-        delay(200);
-      }
-      servo.write(90);
-      delay(300);
-      turnLeft();
-      delay(500);
-      w.setSpeed(130);
-      w.forward();
+      avoidCollision();
     }
   }
 }
 
+// Zwiększ liczbę zobaczonych szczelin przez czujnik szczelinowy
 ISR(PCINT1_vect){
  if( (PINC & (1 << PC0)) ) 
  cnt0++;
@@ -173,27 +172,65 @@ ISR(PCINT1_vect){
  cnt1++;
 }
 
-void turnLeft() {
-  w.stop();
-  w.setSpeed(140);
-  delay(150);
-  w.backLeft();
-  w.forwardRight();
-  delay(600);
-  w.stop();
-  delay(150);
+void turnByAngle(int16_t angle) {
+    // Resetujemy liczniki obrotów kół
+    cnt0 = 0;
+    cnt1 = 0;
+
+    // Ustawiamy prędkości obrotowe kół dla skrętu w miejscu
+
+    // Obliczamy odległość potrzebną do osiągnięcia żądanego kąta skrętu w miejscu
+    double wheelDiameter = 66.0; // Średnica koła w mm
+    double wheelCircumference = wheelDiameter * 3.14159; // Obwód koła
+    double distanceToTravel = (abs(angle) / 360.0) * wheelCircumference; // Odległość do przejechania dla określonego kąta
+    double turnFactor = 2.2;
+    w.stop();
+    w.setSpeed(130);
+    // w.setSpeedLeft();
+    // w.setSpeedRight();
+    
+    if(angle < 0 ){
+      w.forwardRight();
+      w.backLeft();
+    }
+    else {
+      w.forwardLeft();
+      w.backRight();
+    } 
+    // Oczekujemy na wykonanie odpowiedniej ilości obrotów kół, aby osiągnąć żądany kąt
+    while ((cnt0 + cnt1) / 2 * (wheelDiameter / 21) < distanceToTravel*turnFactor) {
+        // Serial.print("Cnt0: ");
+        // Serial.print(cnt0);
+        // Serial.print("Cnt1: ");
+        // Serial.println(cnt1);
+        // Oczekujemy na osiągnięcie kąta
+    }
+    
+    w.stop();
 }
 
-void turnRight() {
-  w.stop();
-  w.setSpeed(140);
-  delay(150);
-  w.backRight();
-  w.forwardLeft();
-  delay(600);
-  w.stop();
-  delay(150);
-}
+// void turnLeft() {
+//   w.stop();
+//   w.setSpeed(140);
+//   delay(150);
+//   w.backLeft();
+//   w.forwardRight();
+//   delay(600);
+//   w.stop();
+//   delay(150);
+// }
+
+// void turnRight() {
+//   w.stop();
+//   w.setSpeed(140);
+//   delay(150);
+//   w.backRight();
+//   w.forwardLeft();
+//   delay(600);
+//   w.stop();
+//   delay(150);
+// }
+
 uint16_t lookAndTellDistance(byte angle) {
   
   unsigned long tot;      // czas powrotu (time-of-travel)
@@ -201,7 +238,10 @@ uint16_t lookAndTellDistance(byte angle) {
 
   Serial.print("Patrzę w kącie ");
   Serial.print(angle);
-  
+  servo.write(angle);
+  servoPosition = angle;
+  delay(50);
+
 /* uruchamia sonar (puls 10 ms na `TRIGGER')
  * oczekuje na powrotny sygnał i aktualizuje
  */
@@ -220,4 +260,80 @@ uint16_t lookAndTellDistance(byte angle) {
   return distance;
 }
 
+bool checkObjectCollision(byte angle, uint8_t distance){
+  if(lookAndTellDistance(angle) < distance) {
+    delay(500);
+    Serial.println("Kolizja w ta strone = true");
+    return true;
+  }
+  else {
+    delay(500);
+    return false;
+  }
+}
+
+void avoidCollision() {
+  w.stop();
+  delay(200);
+  int8_t angleAdjustment = 0;
+  int8_t directionOfAvoidence = 1; // 1 if we go right, -1 if we go left
+
+  if(checkObjectCollision(180, 40)) {
+    directionOfAvoidence = 1;
+  }
+  if((checkObjectCollision(0, 40))) {
+    directionOfAvoidence = -1;
+  }
+  servo.write(90);
+  delay(300);
+  turnByAngle(directionOfAvoidence * 90);
+  delay(300);
+  w.setSpeed(130);
+
+  // Look to the side of the box
+  if(directionOfAvoidence < 0) {
+    servo.write(0);
+    servoPosition = 0;
+  }
+  else {
+    servo.write(180);
+    servoPosition = 180;
+  }
+
+  delay(400);
+  uint8_t servoPositionTemp = servoPosition;
+  servo.write(servoPositionTemp);
+
+  // Go until you pass the box or meet another one
+  while(lookAndTellDistance(servoPositionTemp) < 25){
+    w.forward();
+    // if(lookAndTellDistance(servoPositionTemp) < 8) {
+    //   turnByAngle(directionOfAvoidence * 5);
+    //   angleAdjustment +=  directionOfAvoidence * 5;
+    // }
+    delay(300);
+    w.stop();
+    delay(200);
+    
+    // Look ahead and check any object existans
+    if(checkObjectCollision(90, 17)) {
+      delay(200);
+      avoidCollision();
+    }
+    delay(300);
+    servo.write(servoPositionTemp);
+    delay(300);
+    w.forward();
+  }
+
+  delay(1000);
+  w.stop();
+  servo.write(90);
+  delay(200);
+  turnByAngle(-1 * (directionOfAvoidence * 90  + angleAdjustment));
+  delay(400);
+  
+  w.setSpeed(130);
+  w.forward();
+}
 

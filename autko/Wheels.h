@@ -75,11 +75,16 @@ class Wheels {
         Direction getLeftDirection();
         Direction getRightDirection();
 
+        // void updateSpeed(); // Nowa funkcja do aktualizacji prędkości
+        // void setTargetSpeed(uint8_t); // Nowa funkcja do ustawienia docelowej prędkości
+
     private: 
         int pinsRight[3];
         int pinsLeft[3];
         uint8_t speedLeft;
         uint8_t speedRight;
+        uint8_t targetSpeedLeft; // Docelowa prędkość
+        uint8_t targetSpeedRight; // Docelowa prędkość
         Direction leftWheelDirection = Direction::NONE;
         Direction rightWheelDirection = Direction::NONE;
         Beeper& beeper;

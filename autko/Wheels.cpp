@@ -5,9 +5,8 @@
 #define SET_MOVEMENT(side,f,b) digitalWrite( side[0], f);\
                                digitalWrite( side[1], b)
 
-Wheels::Wheels(Beeper& _beeper) : beeper(_beeper)
-{ 	
-}
+Wheels::Wheels(Beeper& _beeper) : beeper(_beeper) {}
+
 
 void Wheels::attachRight(int pF, int pB, int pS)
 {
@@ -46,8 +45,8 @@ void Wheels::setSpeedLeft(uint8_t s)
 
 void Wheels::setSpeed(uint8_t s)
 {
-    setSpeedLeft(s-6);
-    setSpeedRight(s+6);
+    setSpeedLeft(s);
+    setSpeedRight(s);
     this->manageBeeper();
 }
 
@@ -172,3 +171,19 @@ void Wheels::manageBeeper() {
       beeper.turnOffBeeper();
     }
 }
+
+// void Wheels::setTargetSpeed(uint8_t speed) {
+//     targetSpeedLeft = speed - 6; // Dostosowanie prędkości lewego koła
+//     targetSpeedRight = speed + 6; // Dostosowanie prędkości prawego koła
+// }
+
+// void Wheels::updateSpeed() {
+//     double currentSpeedLeft = 0; // kod do odczytu prędkości z czujnika szczelinowego lewego koła
+//     double currentSpeedRight = 0; // kod do odczytu prędkości z czujnika szczelinowego prawego koła
+
+//     double outputLeft = pidLeft.compute(currentSpeedLeft);
+//     double outputRight = pidRight.compute(currentSpeedRight);
+
+//     setSpeedLeft(constrain(outputLeft, 0, 255));
+//     setSpeedRight(constrain(outputRight, 0, 255));
+// }
