@@ -65,6 +65,8 @@ void setup() {
   delay(500);
   lookAndTellDistance(0);
   delay(500);
+  w.setSpeed(130);
+  w.forward();
   // IrController.validatePIN();
 }
 
@@ -157,9 +159,10 @@ void loop() {
 
   // Avoid collision
   if(lookAndTellDistance(90) < 23){
-    if(w.getLeftDirection() != Wheels::Direction::BACKWARD){
-      avoidCollision();
-    }
+    avoidCollision();
+  }
+  else {
+    w.forward();
   }
 }
 
@@ -183,7 +186,7 @@ void turnByAngle(int16_t angle) {
     double wheelDiameter = 66.0; // Średnica koła w mm
     double wheelCircumference = wheelDiameter * 3.14159; // Obwód koła
     double distanceToTravel = (abs(angle) / 360.0) * wheelCircumference; // Odległość do przejechania dla określonego kąta
-    double turnFactor = 2.2;
+    double turnFactor = 2.5;
     w.stop();
     w.setSpeed(130);
     // w.setSpeedLeft();
@@ -290,48 +293,50 @@ void avoidCollision() {
   delay(300);
   w.setSpeed(130);
 
-  // Look to the side of the box
-  if(directionOfAvoidence < 0) {
-    servo.write(0);
-    servoPosition = 0;
-  }
-  else {
-    servo.write(180);
-    servoPosition = 180;
-  }
+ // Below might work or not
 
-  delay(400);
-  uint8_t servoPositionTemp = servoPosition;
-  servo.write(servoPositionTemp);
+  // // Look to the side of the box
+  // if(directionOfAvoidence < 0) {
+  //   servo.write(0);
+  //   servoPosition = 0;
+  // }
+  // else {
+  //   servo.write(180);
+  //   servoPosition = 180;
+  // }
 
-  // Go until you pass the box or meet another one
-  while(lookAndTellDistance(servoPositionTemp) < 25){
-    w.forward();
-    // if(lookAndTellDistance(servoPositionTemp) < 8) {
-    //   turnByAngle(directionOfAvoidence * 5);
-    //   angleAdjustment +=  directionOfAvoidence * 5;
-    // }
-    delay(300);
-    w.stop();
-    delay(200);
+  // delay(400);
+  // uint8_t servoPositionTemp = servoPosition;
+  // servo.write(servoPositionTemp);
+
+  // // Go until you pass the box or meet another one
+  // while(lookAndTellDistance(servoPositionTemp) < 25){
+  //   w.forward();
+  //   // if(lookAndTellDistance(servoPositionTemp) < 8) {
+  //   //   turnByAngle(directionOfAvoidence * 5);
+  //   //   angleAdjustment +=  directionOfAvoidence * 5;
+  //   // }
+  //   delay(300);
+  //   w.stop();
+  //   delay(200);
     
-    // Look ahead and check any object existans
-    if(checkObjectCollision(90, 17)) {
-      delay(200);
-      avoidCollision();
-    }
-    delay(300);
-    servo.write(servoPositionTemp);
-    delay(300);
-    w.forward();
-  }
+  //   // Look ahead and check any object existans
+  //   if(checkObjectCollision(90, 17)) {
+  //     delay(200);
+  //     avoidCollision();
+  //   }
+  //   delay(300);
+  //   servo.write(servoPositionTemp);
+  //   delay(300);
+  //   w.forward();
+  // }
 
-  delay(1000);
-  w.stop();
-  servo.write(90);
-  delay(200);
-  turnByAngle(-1 * (directionOfAvoidence * 90  + angleAdjustment));
-  delay(400);
+  // delay(1000);
+  // w.stop();
+  // servo.write(90);
+  // delay(200);
+  // turnByAngle(-1 * (directionOfAvoidence * 90  + angleAdjustment));
+  // delay(400);
   
   w.setSpeed(130);
   w.forward();
